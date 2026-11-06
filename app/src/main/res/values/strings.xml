@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">YenRate</string>
+    <string name="widget_name">Yen Rate Widget</string>
+    <string name="widget_description">Displays current USD to JPY exchange rate with hourly updates and change indicators.</string>
+    <string name="widget_compact_name">Yen Rate Compact (1x3)</string>
+    <string name="widget_compact_description">A compact 1x3 widget displaying the live USD to JPY exchange rate.</string>
+
+    <!-- Author Info -->
+    <string name="author_name">Aaron Anderson</string>
+    <string name="author_email">dccpikoro@gmail.com</string>
+    <string name="author_label">Author: %1$s (%2$s)</string>
+
+    <!-- General App & Widget Strings -->
+    <string name="usd_jpy_pair">USD / JPY</string>
+    <string name="refresh_rate">Refresh Rate</string>
+    <string name="rate_change_indicator">Rate Change Indicator</string>
+    <string name="updating">Updating...</string>
+    <string name="updating_rate">Updating rate...</string>
+    <string name="updated_recently">Updated recently</string>
+    <string name="updated_at">Updated %s</string>
+    <string name="last_updated_at">Last updated: %s</string>
+
+    <!-- App Main Screen Strings -->
+    <string name="yen_rate_tracker">Yen Rate Tracker</string>
+    <string name="live_exchange_rate_title">USD to JPY Live Exchange Rate</string>
+    <string name="one_usd_equals">1 USD =</string>
+    <string name="refresh_now">Refresh Now</string>
+    <string name="refreshing">Refreshing...</string>
+    <string name="home_screen_widget">Home Screen Widget</string>
+    <string name="widget_instructions">1. Long press an empty spot on your Home screen.\n2. Tap \'Widgets\'.\n3. Search for \'YenRate\' and select either the Standard or Compact (1x3) Yen Rate Widget.\n4. The widget will update automatically once per hour and display live price change arrows (green ▲ for gain, red ▼ for drop).</string>
+</resources>

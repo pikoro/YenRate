@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">YenRate</string>
+    <string name="widget_name">円レートウィジェット</string>
+    <string name="widget_description">米ドル/日本円の現在為替レートを1時間ごとに自動更新し、変動インジケーターと共に表示します。</string>
+    <string name="widget_compact_name">円レート（コンパクト 1x3）</string>
+    <string name="widget_compact_description">米ドル/日本円のリアルタイム為替レートを表示するコンパクトな1x3ウィジェット。</string>
+
+    <!-- Author Info -->
+    <string name="author_name">Aaron Anderson</string>
+    <string name="author_email">dccpikoro@gmail.com</string>
+    <string name="author_label">作者: %1$s (%2$s)</string>
+
+    <!-- General App & Widget Strings -->
+    <string name="usd_jpy_pair">米ドル / 日本円</string>
+    <string name="refresh_rate">レートを更新</string>
+    <string name="rate_change_indicator">レート変動インジケーター</string>
+    <string name="updating">更新中...</string>
+    <string name="updating_rate">レート更新中...</string>
+    <string name="updated_recently">最近更新されました</string>
+    <string name="updated_at">更新: %s</string>
+    <string name="last_updated_at">最終更新: %s</string>
+
+    <!-- App Main Screen Strings -->
+    <string name="yen_rate_tracker">円レート・トラッカー</string>
+    <string name="live_exchange_rate_title">米ドル/日本円 リアルタイム為替レート</string>
+    <string name="one_usd_equals">1 米ドル =</string>
+    <string name="refresh_now">今すぐ更新</string>
+    <string name="refreshing">更新中...</string>
+    <string name="home_screen_widget">ホーム画面ウィジェット</string>
+    <string name="widget_instructions">1. ホーム画面の空いている場所を長押しします。\n2. 「ウィジェット」をタップします。\n3. 「YenRate」を検索し、標準またはコンパクト（1x3）の円レートウィジェットを追加します。\n4. ウィジェットは1時間ごとに自動更新され、リアルタイムの価格変動矢印（緑色の▲は上昇、赤色の▼は下落）が表示されます。</string>
+</resources>
