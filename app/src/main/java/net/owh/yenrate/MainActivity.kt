@@ -5,16 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -23,7 +20,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,8 +40,8 @@ import androidx.compose.ui.unit.sp
 import net.owh.yenrate.data.YenRatePreferences
 import net.owh.yenrate.data.YenRateRepository
 import net.owh.yenrate.ui.theme.YenRateTheme
-import net.owh.yenrate.widget.YenRateWidgetProvider
 import net.owh.yenrate.worker.YenRateUpdateWorker
+import net.owh.yenrate.widget.WidgetUpdater
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,10 +80,10 @@ fun YenRateMainScreen(modifier: Modifier = Modifier) {
     fun refreshData() {
         scope.launch {
             isLoading = true
-            YenRateRepository.fetchJpyRate().onSuccess { newRate ->
+            val result = YenRateRepository.fetchJpyRate()
+            result.onSuccess { newRate ->
                 rateData = YenRatePreferences.saveRate(context, newRate)
-                YenRateWidgetProvider.updateAllWidgets(context)
-                net.owh.yenrate.widget.YenRateCompactWidgetProvider.updateAllWidgets(context)
+                WidgetUpdater.updateAllWidgets(context)
             }
             isLoading = false
         }
@@ -148,102 +143,89 @@ fun YenRateMainScreen(modifier: Modifier = Modifier) {
 
                 if (isLoading) {
                     CircularProgressIndicator(
-                        color = Color(0xFF38BDF8),
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White
                     )
                 } else {
+                    val rateText = if (rateData.currentRate > 0.0) {
+                        String.format(Locale.US, "¥ %.2f", rateData.currentRate)
+                    } else {
+                        "¥ ---.--"
+                    }
                     Text(
-                        text = if (rateData.currentRate > 0.0) {
-                            String.format(Locale.US, "¥ %.2f", rateData.currentRate)
-                        } else {
-                            "¥ ---.--"
-                        },
+                        text = rateText,
                         color = Color.White,
-                        fontSize = 42.sp,
-                        fontWeight = FontWeight.ExtraBold
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Rate Change Row
-                if (rateData.currentRate > 0.0) {
-                    val changeColor = when {
-                        rateData.isPositive -> Color(0xFF4CAF50)
-                        rateData.isNegative -> Color(0xFFEF5350)
-                        else -> Color(0xFF94A3B8)
-                    }
-
-                    val arrowRes = when {
-                        rateData.isPositive -> R.drawable.ic_arrow_up
-                        rateData.isNegative -> R.drawable.ic_arrow_down
-                        else -> R.drawable.ic_arrow_neutral
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(id = arrowRes),
-                            contentDescription = stringResource(R.string.rate_change_indicator),
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = String.format(
-                                Locale.US,
-                                "%+.2f (%+.2f%%)",
-                                rateData.change,
-                                rateData.changePercentage
-                            ),
-                            color = changeColor,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    if (rateData.lastUpdatedTime > 0) {
-                        val timeFormat = SimpleDateFormat("MMM d, yyyy 'at' h:mm a", Locale.getDefault())
-                        Text(
-                            text = stringResource(R.string.last_updated_at, timeFormat.format(Date(rateData.lastUpdatedTime))),
-                            color = Color(0xFF64748B),
-                            fontSize = 12.sp
-                        )
-                    }
+                val changeText = if (rateData.currentRate > 0.0) {
+                    String.format(
+                        Locale.US,
+                        "%+.2f (%+.2f%%)",
+                        rateData.change,
+                        rateData.changePercentage
+                    )
+                } else {
+                    "-- (--%)"
                 }
+                Text(
+                    text = changeText,
+                    color = if (rateData.isPositive) Color(0xFF4CAF50) else if (rateData.isNegative) Color(0xFFEF5350) else Color(0xFF94A3B8),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium
+                )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                Button(
-                    onClick = { refreshData() },
-                    enabled = !isLoading,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0EA5E9),
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(text = if (isLoading) stringResource(R.string.refreshing) else stringResource(R.string.refresh_now))
+                val lastUpdatedText = if (rateData.lastUpdatedTime > 0) {
+                    val sdf = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
+                    stringResource(R.string.last_updated_at, sdf.format(Date(rateData.lastUpdatedTime)))
+                } else {
+                    stringResource(R.string.updating_rate)
                 }
+                Text(
+                    text = lastUpdatedText,
+                    color = Color(0xFF94A3B8),
+                    fontSize = 12.sp
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Widget Instructions Card
+        Button(
+            onClick = { refreshData() },
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF3B82F6),
+                contentColor = Color.White
+            )
+        ) {
+            Text(
+                text = stringResource(R.string.refresh_button),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Widget Setup Instructions Card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(24.dp)
             ) {
                 Text(
                     text = stringResource(R.string.home_screen_widget),
@@ -251,23 +233,14 @@ fun YenRateMainScreen(modifier: Modifier = Modifier) {
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Text(
                     text = stringResource(R.string.widget_instructions),
                     color = Color(0xFF94A3B8),
                     fontSize = 14.sp,
                     lineHeight = 20.sp
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(
-                        R.string.author_label,
-                        stringResource(R.string.author_name),
-                        stringResource(R.string.author_email)
-                    ),
-                    color = Color(0xFF64748B),
-                    fontSize = 12.sp
                 )
             }
         }

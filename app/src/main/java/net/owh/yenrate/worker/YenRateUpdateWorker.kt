@@ -11,7 +11,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import net.owh.yenrate.data.YenRatePreferences
 import net.owh.yenrate.data.YenRateRepository
-import net.owh.yenrate.widget.YenRateWidgetProvider
+import net.owh.yenrate.widget.WidgetUpdater
 import java.util.concurrent.TimeUnit
 
 class YenRateUpdateWorker(
@@ -20,21 +20,17 @@ class YenRateUpdateWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        return YenRateRepository.fetchJpyRate().fold(
-            onSuccess = { rate ->
-                YenRatePreferences.saveRate(context, rate)
-                YenRateWidgetProvider.updateAllWidgets(context)
-                net.owh.yenrate.widget.YenRateCompactWidgetProvider.updateAllWidgets(context)
-                Result.success()
-            },
-            onFailure = {
-                if (runAttemptCount < 3) {
-                    Result.retry()
-                } else {
-                    Result.failure()
-                }
-            }
-        )
+        val result = YenRateRepository.fetchJpyRate()
+        result.onSuccess { rate ->
+            YenRatePreferences.saveRate(context, rate)
+            WidgetUpdater.updateAllWidgets(context)
+            return Result.success()
+        }
+        return if (runAttemptCount < 3) {
+            Result.retry()
+        } else {
+            Result.failure()
+        }
     }
 
     companion object {

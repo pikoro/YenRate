@@ -2,6 +2,7 @@ package net.owh.yenrate.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 data class RateData(
     val currentRate: Double,
@@ -42,11 +43,11 @@ object YenRatePreferences {
 
         val now = System.currentTimeMillis()
 
-        prefs.edit()
-            .putFloat(KEY_PREVIOUS_RATE, previousRate.toFloat())
-            .putFloat(KEY_CURRENT_RATE, newRate.toFloat())
-            .putLong(KEY_LAST_UPDATED, now)
-            .apply()
+        prefs.edit {
+            putFloat(KEY_PREVIOUS_RATE, previousRate.toFloat())
+            putFloat(KEY_CURRENT_RATE, newRate.toFloat())
+            putLong(KEY_LAST_UPDATED, now)
+        }
 
         return RateData(
             currentRate = newRate,
