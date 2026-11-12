@@ -24,13 +24,13 @@ Designed for travelers, expats, and financial observers in Japan, **YenRate** pr
 | Widget Type | Size | Key Elements |
 | :--- | :--- | :--- |
 | **Standard Widget** | `3x2` | USD/JPY pair label, live rate, yellow real rate, 24h trend graph with X/Y scales, change arrow (▲/▼), last update timestamp, manual refresh button |
-| **Compact Widget** | `1x3` | Currency pair label, live exchange rate, yellow real rate (at 50% text size), change arrow (▲/▼) |
+| **Compact Widget** | `3x1` | Currency pair label, live exchange rate, yellow real rate (at 50% text size), change arrow (▲/▼) |
 
 ### How to Add a Widget
 1. Long-press an empty space on your Android Home screen.
 2. Tap **Widgets**.
 3. Search for **YenRate**.
-4. Select either the **Standard (3x2)** or **Compact (1x3)** widget and drag it onto your screen.
+4. Select either the **Standard (3x2)** or **Compact (3x1)** widget and drag it onto your screen.
 
 ---
 
