@@ -1,6 +1,6 @@
 # YenRate 💴
 
-**YenRate** is a lightweight, modern Android application for tracking live **USD / JPY (US Dollar to Japanese Yen)** exchange rates in real time, featuring 24-hour rate trend graphs and home screen widgets.
+**YenRate** is a lightweight, Open Source,  modern Android application for tracking live **USD / JPY (US Dollar to Japanese Yen)** exchange rates in real time, featuring 24-hour rate trend graphs and home screen widgets.
 
 Designed for travelers, expats, and financial observers in Japan, **YenRate** provides both the live market interbank FX rate and an estimated **"Real Rate"**—reflecting the actual currency exchange rate you can expect at local businesses and exchange kiosks after typical service margins.
 
