@@ -5,7 +5,14 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Shader
 import android.widget.RemoteViews
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.toColorInt
 import net.owh.yenrate.MainActivity
 import net.owh.yenrate.R
@@ -86,6 +93,12 @@ object WidgetUpdater {
             R.id.text_compact_exchange_rate
         }
 
+        val realRateId = if (layoutResId == R.layout.widget_yen_rate) {
+            R.id.text_real_exchange_rate
+        } else {
+            R.id.text_compact_real_exchange_rate
+        }
+
         val arrowId = if (layoutResId == R.layout.widget_yen_rate) {
             R.id.image_arrow
         } else {
@@ -93,6 +106,7 @@ object WidgetUpdater {
         }
 
         views.setTextViewText(rateId, "¥ ---.--")
+        views.setTextViewText(realRateId, "")
         views.setImageViewResource(arrowId, R.drawable.ic_arrow_neutral)
 
         if (layoutResId == R.layout.widget_yen_rate) {
@@ -109,6 +123,12 @@ object WidgetUpdater {
             R.id.text_compact_exchange_rate
         }
 
+        val realRateId = if (layoutResId == R.layout.widget_yen_rate) {
+            R.id.text_real_exchange_rate
+        } else {
+            R.id.text_compact_real_exchange_rate
+        }
+
         val arrowId = if (layoutResId == R.layout.widget_yen_rate) {
             R.id.image_arrow
         } else {
@@ -119,6 +139,10 @@ object WidgetUpdater {
             rateId,
             String.format(Locale.US, "¥ %.2f", data.currentRate)
         )
+
+        val formattedRealRate = String.format(Locale.US, "¥ %.2f", data.realRate)
+        views.setTextViewText(realRateId, formattedRealRate)
+        views.setTextColor(realRateId, "#FFD600".toColorInt())
 
         val arrowRes = when {
             data.isPositive -> R.drawable.ic_arrow_up
@@ -150,6 +174,140 @@ object WidgetUpdater {
             } else {
                 views.setTextViewText(R.id.text_last_updated, context.getString(R.string.updated_recently))
             }
+
+            // Render 24h Graph Bitmap with X/Y Scales
+            val graphBitmap = createGraphBitmap(context, data)
+            views.setImageViewBitmap(R.id.image_graph, graphBitmap)
         }
+    }
+
+    private fun createGraphBitmap(
+        context: Context,
+        data: RateData,
+        widthPx: Int = 400,
+        heightPx: Int = 140
+    ): Bitmap {
+        val bitmap = createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val history = data.history
+
+        if (history.size < 2) return bitmap
+
+        val lineColor = when {
+            data.isPositive -> "#4CAF50".toColorInt()
+            data.isNegative -> "#EF5350".toColorInt()
+            else -> "#3B82F6".toColorInt()
+        }
+
+        val fillColorTop = when {
+            data.isPositive -> "#334CAF50".toColorInt()
+            data.isNegative -> "#33EF5350".toColorInt()
+            else -> "#333B82F6".toColorInt()
+        }
+
+        val minRate = data.minRate
+        val maxRate = data.maxRate
+        val rateRange = (maxRate - minRate).let { if (it <= 0.001) 1.0 else it }
+
+        val leftPadding = 85f
+        val rightPadding = 12f
+        val topPadding = 14f
+        val bottomPadding = 28f
+
+        val chartWidth = widthPx - leftPadding - rightPadding
+        val chartHeight = heightPx - topPadding - bottomPadding
+
+        // Draw horizontal gridlines
+        val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = "#334155".toColorInt()
+            strokeWidth = 2f
+            style = Paint.Style.STROKE
+        }
+        val topY = topPadding
+        val midY = topPadding + chartHeight / 2f
+        val bottomY = topPadding + chartHeight
+
+        canvas.drawLine(leftPadding, topY, widthPx - rightPadding, topY, gridPaint)
+        canvas.drawLine(leftPadding, midY, widthPx - rightPadding, midY, gridPaint)
+        canvas.drawLine(leftPadding, bottomY, widthPx - rightPadding, bottomY, gridPaint)
+
+        // Draw Y-Axis Rate Scale Labels (High & Low)
+        val yTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = 19f
+            isFakeBoldText = true
+        }
+
+        yTextPaint.color = "#4CAF50".toColorInt()
+        canvas.drawText(String.format(Locale.US, "¥%.2f", maxRate), 6f, topY + 14f, yTextPaint)
+
+        yTextPaint.color = "#EF5350".toColorInt()
+        canvas.drawText(String.format(Locale.US, "¥%.2f", minRate), 6f, bottomY, yTextPaint)
+
+        // Main Market Rate Points
+        val mainPoints = history.mapIndexed { index, point ->
+            val x = leftPadding + (index.toFloat() / (history.size - 1)) * chartWidth
+            val normalizedRate = (point.rate - minRate) / rateRange
+            val y = topPadding + chartHeight - (normalizedRate.toFloat() * chartHeight)
+            Pair(x, y)
+        }
+
+        val strokePath = Path()
+        val fillPath = Path()
+
+        strokePath.moveTo(mainPoints[0].first, mainPoints[0].second)
+        fillPath.moveTo(mainPoints[0].first, bottomY)
+        fillPath.lineTo(mainPoints[0].first, mainPoints[0].second)
+
+        for (i in 1 until mainPoints.size) {
+            val p0 = mainPoints[i - 1]
+            val p1 = mainPoints[i]
+            val controlX1 = (p0.first + p1.first) / 2f
+            val controlY1 = p0.second
+            val controlX2 = (p0.first + p1.first) / 2f
+            val controlY2 = p1.second
+
+            strokePath.cubicTo(controlX1, controlY1, controlX2, controlY2, p1.first, p1.second)
+            fillPath.cubicTo(controlX1, controlY1, controlX2, controlY2, p1.first, p1.second)
+        }
+
+        fillPath.lineTo(mainPoints.last().first, bottomY)
+        fillPath.close()
+
+        // Fill Paint
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            shader = LinearGradient(
+                0f, topPadding, 0f, bottomY,
+                fillColorTop, "#00000000".toColorInt(),
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawPath(fillPath, fillPaint)
+
+        // Line Paint (Main Market Rate)
+        val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 4.5f
+            color = lineColor
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        canvas.drawPath(strokePath, linePaint)
+
+        // Draw X-Axis Time Scale Labels
+        val xTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = "#94A3B8".toColorInt()
+            textSize = 18f
+        }
+
+        val leftTimeStr = context.getString(R.string.time_24h_ago)
+        val rightTimeStr = context.getString(R.string.time_now)
+
+        canvas.drawText(leftTimeStr, leftPadding, heightPx - 4f, xTextPaint)
+
+        val rightTextWidth = xTextPaint.measureText(rightTimeStr)
+        canvas.drawText(rightTimeStr, widthPx - rightPadding - rightTextWidth, heightPx - 4f, xTextPaint)
+
+        return bitmap
     }
 }

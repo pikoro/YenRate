@@ -14,8 +14,8 @@
     <string name="usd_jpy_pair">米ドル / 日本円</string>
     <string name="refresh_rate">レートを更新</string>
     <string name="rate_change_indicator">レート変動インジケーター</string>
-    <string name="updating">更新中...</string>
-    <string name="updating_rate">レート更新中...</string>
+    <string name="updating">更新中…</string>
+    <string name="updating_rate">レート更新中…</string>
     <string name="updated_recently">最近更新されました</string>
     <string name="updated_at">更新: %s</string>
     <string name="last_updated_at">最終更新: %s</string>
@@ -25,11 +25,19 @@
     <string name="live_exchange_rate_title">米ドル/日本円 リアルタイム為替レート</string>
     <string name="one_usd_equals">1 米ドル =</string>
     <string name="refresh_now">今すぐ更新</string>
-    <string name="refreshing">更新中...</string>
+    <string name="refreshing">更新中…</string>
     <string name="home_screen_widget">ホーム画面ウィジェット</string>
     <string name="widget_instructions">1. ホーム画面の空いている場所を長押しします。\n2. 「ウィジェット」をタップします。\n3. 「YenRate」を検索し、標準またはコンパクト（1x3）の円レートウィジェットを追加します。\n4. ウィジェットは1時間ごとに自動更新され、リアルタイムの価格変動矢印（緑色の▲は上昇、赤色の▼は下落）が表示されます。</string>
     <string name="current_exchange_rate_value">現在為替レート</string>
     <string name="rate_change_status">レート変動状況</string>
     <string name="last_updated_time">最終更新日時</string>
     <string name="refresh_button">更新</string>
+    <string name="rate_history_24h">24時間 レート推移</string>
+    <string name="high_24h">24時間最高: ¥%.2f</string>
+    <string name="low_24h">24時間最安: ¥%.2f</string>
+    <string name="time_now">現在</string>
+    <string name="time_24h_ago">24時間前</string>
+    <string name="time_12h_ago">12時間前</string>
+    <string name="real_rate_title">実効レート</string>
+    <string name="real_rate_indicator">実効レート</string>
 </resources>

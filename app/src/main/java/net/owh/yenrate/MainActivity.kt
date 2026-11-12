@@ -4,8 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,12 +34,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.owh.yenrate.data.RateData
 import net.owh.yenrate.data.YenRatePreferences
 import net.owh.yenrate.data.YenRateRepository
 import net.owh.yenrate.ui.theme.YenRateTheme
@@ -158,9 +168,20 @@ fun YenRateMainScreen(modifier: Modifier = Modifier) {
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (rateData.currentRate > 0.0) {
+                        Text(
+                            text = stringResource(R.string.real_rate_title) + ": " + String.format(Locale.US, "¥ %.2f", rateData.realRate),
+                            color = Color(0xFFFFD600),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 val changeText = if (rateData.currentRate > 0.0) {
                     String.format(
@@ -195,7 +216,12 @@ fun YenRateMainScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // 24-Hour Trend Chart Card
+        RateHistoryCard(data = rateData)
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         Button(
             onClick = { refreshData() },
@@ -213,7 +239,7 @@ fun YenRateMainScreen(modifier: Modifier = Modifier) {
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Widget Setup Instructions Card
         Card(
@@ -244,5 +270,205 @@ fun YenRateMainScreen(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun RateHistoryCard(data: RateData, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.rate_history_24h),
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = stringResource(R.string.real_rate_indicator) + ": " + String.format(Locale.US, "¥%.2f", data.realRate),
+                    color = Color(0xFFFFD600),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (data.history.size >= 2) {
+                val minRate = data.minRate
+                val maxRate = data.maxRate
+                val midRate = (minRate + maxRate) / 2.0
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Y-Axis Labels (Rate Scale)
+                    Column(
+                        modifier = Modifier
+                            .height(140.dp)
+                            .padding(end = 8.dp),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = String.format(Locale.US, "¥%.2f", maxRate),
+                            color = Color(0xFF4CAF50),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = String.format(Locale.US, "¥%.2f", midRate),
+                            color = Color(0xFF64748B),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = String.format(Locale.US, "¥%.2f", minRate),
+                            color = Color(0xFFEF5350),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    // Main Chart Canvas
+                    RateHistoryCanvas(
+                        data = data,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(140.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // X-Axis Labels (Time Scale)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 52.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.time_24h_ago),
+                        color = Color(0xFF64748B),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = stringResource(R.string.time_12h_ago),
+                        color = Color(0xFF64748B),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = stringResource(R.string.time_now),
+                        color = Color(0xFF94A3B8),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RateHistoryCanvas(
+    data: RateData,
+    modifier: Modifier = Modifier
+) {
+    val history = data.history
+    val isPositive = data.isPositive
+    val isNegative = data.isNegative
+
+    val lineColor = if (isPositive) Color(0xFF4CAF50) else if (isNegative) Color(0xFFEF5350) else Color(0xFF3B82F6)
+    val fillColor = if (isPositive) Color(0x334CAF50) else if (isNegative) Color(0x33EF5350) else Color(0x333B82F6)
+    val gridColor = Color(0xFF334155)
+
+    Canvas(modifier = modifier) {
+        if (history.size < 2) return@Canvas
+
+        val width = size.width
+        val height = size.height
+
+        // Draw horizontal gridlines (Top, Mid, Bottom)
+        drawLine(color = gridColor, start = Offset(0f, 4f), end = Offset(width, 4f), strokeWidth = 1.dp.toPx())
+        drawLine(color = gridColor, start = Offset(0f, height / 2f), end = Offset(width, height / 2f), strokeWidth = 1.dp.toPx())
+        drawLine(color = gridColor, start = Offset(0f, height - 4f), end = Offset(width, height - 4f), strokeWidth = 1.dp.toPx())
+
+        val minRate = data.minRate
+        val maxRate = data.maxRate
+        val rateRange = (maxRate - minRate).let { if (it <= 0.001) 1.0 else it }
+
+        val padding = 8f
+        val chartWidth = width - 2 * padding
+        val chartHeight = height - 2 * padding
+
+        // Main Rate Points (Market Rate)
+        val mainPoints = history.mapIndexed { index, point ->
+            val x = padding + (index.toFloat() / (history.size - 1)) * chartWidth
+            val normalizedRate = (point.rate - minRate) / rateRange
+            val y = padding + chartHeight - (normalizedRate.toFloat() * chartHeight)
+            Pair(x, y)
+        }
+
+        // Construct Main Path & Gradient Fill Path
+        val strokePath = Path()
+        val fillPath = Path()
+
+        strokePath.moveTo(mainPoints[0].first, mainPoints[0].second)
+        fillPath.moveTo(mainPoints[0].first, height)
+        fillPath.lineTo(mainPoints[0].first, mainPoints[0].second)
+
+        for (i in 1 until mainPoints.size) {
+            val p0 = mainPoints[i - 1]
+            val p1 = mainPoints[i]
+            val controlX1 = (p0.first + p1.first) / 2f
+            val controlY1 = p0.second
+            val controlX2 = (p0.first + p1.first) / 2f
+            val controlY2 = p1.second
+
+            strokePath.cubicTo(controlX1, controlY1, controlX2, controlY2, p1.first, p1.second)
+            fillPath.cubicTo(controlX1, controlY1, controlX2, controlY2, p1.first, p1.second)
+        }
+
+        fillPath.lineTo(mainPoints.last().first, height)
+        fillPath.close()
+
+        // Draw Fill Gradient under Main Curve
+        drawPath(
+            path = fillPath,
+            brush = Brush.verticalGradient(
+                colors = listOf(fillColor, Color.Transparent),
+                startY = 0f,
+                endY = height
+            )
+        )
+
+        // Draw Main Market Rate Line
+        drawPath(
+            path = strokePath,
+            color = lineColor,
+            style = Stroke(
+                width = 3.dp.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
     }
 }

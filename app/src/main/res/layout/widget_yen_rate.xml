@@ -36,32 +36,50 @@
             android:src="@drawable/ic_refresh" />
     </LinearLayout>
 
-    <!-- Main Exchange Rate Display -->
-    <TextView
-        android:id="@+id/text_exchange_rate"
+    <!-- Main & Real Exchange Rate Display -->
+    <LinearLayout
+        android:id="@+id/rate_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/header_layout"
-        android:layout_marginTop="6dp"
-        android:text="¥ ---.--"
-        android:textColor="#F8FAFC"
-        android:textSize="26sp"
-        android:textStyle="bold" />
+        android:layout_marginTop="4dp"
+        android:gravity="bottom"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/text_exchange_rate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="¥ ---.--"
+            android:textColor="#F8FAFC"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/text_real_exchange_rate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text=""
+            android:textColor="#FFD600"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <!-- Change Indicator Row -->
     <LinearLayout
         android:id="@+id/change_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/text_exchange_rate"
-        android:layout_marginTop="4dp"
+        android:layout_below="@id/rate_container"
+        android:layout_marginTop="2dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <ImageView
             android:id="@+id/image_arrow"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
             android:layout_marginEnd="4dp"
             android:contentDescription="@string/rate_change_indicator"
             android:src="@drawable/ic_arrow_neutral" />
@@ -72,9 +90,21 @@
             android:layout_height="wrap_content"
             android:text="-- (--%)"
             android:textColor="#94A3B8"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
     </LinearLayout>
+
+    <!-- 24-Hour Graph View -->
+    <ImageView
+        android:id="@+id/image_graph"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/change_layout"
+        android:layout_above="@id/text_last_updated"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
+        android:scaleType="fitXY"
+        android:contentDescription="@string/rate_history_24h" />
 
     <!-- Footer: Last Updated Time -->
     <TextView
