@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.DashPathEffect
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
@@ -193,17 +194,8 @@ object WidgetUpdater {
 
         if (history.size < 2) return bitmap
 
-        val lineColor = when {
-            data.isPositive -> "#4CAF50".toColorInt()
-            data.isNegative -> "#EF5350".toColorInt()
-            else -> "#3B82F6".toColorInt()
-        }
-
-        val fillColorTop = when {
-            data.isPositive -> "#334CAF50".toColorInt()
-            data.isNegative -> "#33EF5350".toColorInt()
-            else -> "#333B82F6".toColorInt()
-        }
+        val lineColor = "#3B82F6".toColorInt() // Always blue line
+        val fillColorTop = "#333B82F6".toColorInt() // Always blue gradient fill
 
         val minRate = data.minRate
         val maxRate = data.maxRate
@@ -231,6 +223,29 @@ object WidgetUpdater {
         canvas.drawLine(leftPadding, midY, widthPx - rightPadding, midY, gridPaint)
         canvas.drawLine(leftPadding, bottomY, widthPx - rightPadding, bottomY, gridPaint)
 
+        // Draw Light Dotted Lines for High and Low Rates
+        val historyMax = history.maxOf { it.rate }
+        val historyMin = history.minOf { it.rate }
+
+        val highY = topPadding + chartHeight - (((historyMax - minRate) / rateRange).toFloat() * chartHeight)
+        val lowY = topPadding + chartHeight - (((historyMin - minRate) / rateRange).toFloat() * chartHeight)
+
+        val dottedPaintHigh = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = "#AA4CAF50".toColorInt()
+            strokeWidth = 2f
+            style = Paint.Style.STROKE
+            pathEffect = DashPathEffect(floatArrayOf(6f, 6f), 0f)
+        }
+        val dottedPaintLow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = "#AAEF5350".toColorInt()
+            strokeWidth = 2f
+            style = Paint.Style.STROKE
+            pathEffect = DashPathEffect(floatArrayOf(6f, 6f), 0f)
+        }
+
+        canvas.drawLine(leftPadding, highY, widthPx - rightPadding, highY, dottedPaintHigh)
+        canvas.drawLine(leftPadding, lowY, widthPx - rightPadding, lowY, dottedPaintLow)
+
         // Draw Y-Axis Rate Scale Labels (High & Low)
         val yTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = 19f
@@ -243,7 +258,7 @@ object WidgetUpdater {
         yTextPaint.color = "#EF5350".toColorInt()
         canvas.drawText(String.format(Locale.US, "¥%.2f", minRate), 6f, bottomY, yTextPaint)
 
-        // Main Market Rate Points
+        // Main Market Rate Points (Straight Line Segments)
         val mainPoints = history.mapIndexed { index, point ->
             val x = leftPadding + (index.toFloat() / (history.size - 1)) * chartWidth
             val normalizedRate = (point.rate - minRate) / rateRange
@@ -259,15 +274,8 @@ object WidgetUpdater {
         fillPath.lineTo(mainPoints[0].first, mainPoints[0].second)
 
         for (i in 1 until mainPoints.size) {
-            val p0 = mainPoints[i - 1]
-            val p1 = mainPoints[i]
-            val controlX1 = (p0.first + p1.first) / 2f
-            val controlY1 = p0.second
-            val controlX2 = (p0.first + p1.first) / 2f
-            val controlY2 = p1.second
-
-            strokePath.cubicTo(controlX1, controlY1, controlX2, controlY2, p1.first, p1.second)
-            fillPath.cubicTo(controlX1, controlY1, controlX2, controlY2, p1.first, p1.second)
+            strokePath.lineTo(mainPoints[i].first, mainPoints[i].second)
+            fillPath.lineTo(mainPoints[i].first, mainPoints[i].second)
         }
 
         fillPath.lineTo(mainPoints.last().first, bottomY)
@@ -284,7 +292,7 @@ object WidgetUpdater {
         }
         canvas.drawPath(fillPath, fillPaint)
 
-        // Line Paint (Main Market Rate)
+        // Line Paint (Main Market Rate - Blue Line)
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = 4.5f

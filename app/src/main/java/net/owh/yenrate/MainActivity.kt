@@ -38,6 +38,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -393,12 +394,12 @@ fun RateHistoryCanvas(
     modifier: Modifier = Modifier
 ) {
     val history = data.history
-    val isPositive = data.isPositive
-    val isNegative = data.isNegative
-
-    val lineColor = if (isPositive) Color(0xFF4CAF50) else if (isNegative) Color(0xFFEF5350) else Color(0xFF3B82F6)
-    val fillColor = if (isPositive) Color(0x334CAF50) else if (isNegative) Color(0x33EF5350) else Color(0x333B82F6)
+    val lineColor = Color(0xFF3B82F6) // Always blue line
+    val fillColor = Color(0x333B82F6) // Always blue gradient fill
     val gridColor = Color(0xFF334155)
+
+    val highDottedColor = Color(0xAA4CAF50) // Light green dotted line for 24h High
+    val lowDottedColor = Color(0xAAEF5350)  // Light red dotted line for 24h Low
 
     Canvas(modifier = modifier) {
         if (history.size < 2) return@Canvas
@@ -419,7 +420,34 @@ fun RateHistoryCanvas(
         val chartWidth = width - 2 * padding
         val chartHeight = height - 2 * padding
 
-        // Main Rate Points (Market Rate)
+        // Draw Light Dotted Lines for High and Low Rates
+        val historyMax = history.maxOf { it.rate }
+        val historyMin = history.minOf { it.rate }
+
+        val highY = padding + chartHeight - (((historyMax - minRate) / rateRange).toFloat() * chartHeight)
+        val lowY = padding + chartHeight - (((historyMin - minRate) / rateRange).toFloat() * chartHeight)
+
+        val dottedEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f)
+
+        // Light dotted line for High rate
+        drawLine(
+            color = highDottedColor,
+            start = Offset(0f, highY),
+            end = Offset(width, highY),
+            strokeWidth = 1.5.dp.toPx(),
+            pathEffect = dottedEffect
+        )
+
+        // Light dotted line for Low rate
+        drawLine(
+            color = lowDottedColor,
+            start = Offset(0f, lowY),
+            end = Offset(width, lowY),
+            strokeWidth = 1.5.dp.toPx(),
+            pathEffect = dottedEffect
+        )
+
+        // Main Rate Points (Market Rate) - Straight Line Segments
         val mainPoints = history.mapIndexed { index, point ->
             val x = padding + (index.toFloat() / (history.size - 1)) * chartWidth
             val normalizedRate = (point.rate - minRate) / rateRange
@@ -427,7 +455,7 @@ fun RateHistoryCanvas(
             Pair(x, y)
         }
 
-        // Construct Main Path & Gradient Fill Path
+        // Construct Main Path & Gradient Fill Path using STRAIGHT LINE SEGMENTS (lineTo)
         val strokePath = Path()
         val fillPath = Path()
 
@@ -436,21 +464,14 @@ fun RateHistoryCanvas(
         fillPath.lineTo(mainPoints[0].first, mainPoints[0].second)
 
         for (i in 1 until mainPoints.size) {
-            val p0 = mainPoints[i - 1]
-            val p1 = mainPoints[i]
-            val controlX1 = (p0.first + p1.first) / 2f
-            val controlY1 = p0.second
-            val controlX2 = (p0.first + p1.first) / 2f
-            val controlY2 = p1.second
-
-            strokePath.cubicTo(controlX1, controlY1, controlX2, controlY2, p1.first, p1.second)
-            fillPath.cubicTo(controlX1, controlY1, controlX2, controlY2, p1.first, p1.second)
+            strokePath.lineTo(mainPoints[i].first, mainPoints[i].second)
+            fillPath.lineTo(mainPoints[i].first, mainPoints[i].second)
         }
 
         fillPath.lineTo(mainPoints.last().first, height)
         fillPath.close()
 
-        // Draw Fill Gradient under Main Curve
+        // Draw Fill Gradient under Main Line
         drawPath(
             path = fillPath,
             brush = Brush.verticalGradient(
@@ -460,7 +481,7 @@ fun RateHistoryCanvas(
             )
         )
 
-        // Draw Main Market Rate Line
+        // Draw Blue Main Market Rate Line (Straight Segments)
         drawPath(
             path = strokePath,
             color = lineColor,
