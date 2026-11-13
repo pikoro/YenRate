@@ -28,8 +28,23 @@ data class RateData(
     val isNegative: Boolean get() = change < -0.00001
     val isNeutral: Boolean get() = !isPositive && !isNegative
 
-    val minRate: Double get() = if (history.isNotEmpty()) history.minOf { it.rate } else currentRate
-    val maxRate: Double get() = if (history.isNotEmpty()) history.maxOf { it.rate } else currentRate
+    val minRate: Double
+        get() {
+            if (history.isEmpty()) return currentRate
+            val rawMin = history.minOf { it.rate }
+            val rawMax = history.maxOf { it.rate }
+            val mid = (rawMin + rawMax) / 2.0
+            return minOf(rawMin, mid - 0.5)
+        }
+
+    val maxRate: Double
+        get() {
+            if (history.isEmpty()) return currentRate
+            val rawMin = history.minOf { it.rate }
+            val rawMax = history.maxOf { it.rate }
+            val mid = (rawMin + rawMax) / 2.0
+            return maxOf(rawMax, mid + 0.5)
+        }
 }
 
 object YenRatePreferences {
@@ -41,6 +56,7 @@ object YenRatePreferences {
     private const val KEY_HISTORY = "history_json"
 
     private const val TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000L
+    private const val THIRTY_MINUTES_MS = 30 * 60 * 1000L
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -52,16 +68,29 @@ object YenRatePreferences {
         val previousRate = if (existingCurrent > 0.0) existingCurrent else newRate
         val now = System.currentTimeMillis()
 
-        val currentHistory = loadHistory(prefs).toMutableList()
-        // Remove points older than 24 hours
-        currentHistory.removeAll { (now - it.timestamp) > TWENTY_FOUR_HOURS_MS }
-        currentHistory.add(RatePoint(now, newRate))
+        var history = loadHistory(prefs).toMutableList()
+
+        if (history.size < 6) {
+            history = bootstrap24hHistory(newRate, now).toMutableList()
+        } else {
+            // Remove points older than 24 hours
+            history.removeAll { (now - it.timestamp) > TWENTY_FOUR_HOURS_MS }
+
+            val lastPoint = history.lastOrNull()
+            if (lastPoint != null && (now - lastPoint.timestamp) < THIRTY_MINUTES_MS) {
+                // Update latest entry if within 30 minutes
+                history[history.size - 1] = RatePoint(now, newRate)
+            } else {
+                // Append new hourly entry
+                history.add(RatePoint(now, newRate))
+            }
+        }
 
         // Keep maximum of 24 points
-        val trimmedHistory = if (currentHistory.size > 24) {
-            currentHistory.takeLast(24)
+        val trimmedHistory = if (history.size > 24) {
+            history.takeLast(24)
         } else {
-            currentHistory
+            history
         }
 
         val jsonString = serializeHistory(trimmedHistory)
@@ -73,13 +102,11 @@ object YenRatePreferences {
             putString(KEY_HISTORY, jsonString)
         }
 
-        val effectiveHistory = ensureSufficientPoints(trimmedHistory, newRate, now)
-
         return RateData(
             currentRate = newRate,
             previousRate = previousRate,
             lastUpdatedTime = now,
-            history = effectiveHistory
+            history = trimmedHistory
         )
     }
 
@@ -88,15 +115,20 @@ object YenRatePreferences {
         val current = prefs.getFloat(KEY_CURRENT_RATE, 0.0f).toDouble()
         val previous = prefs.getFloat(KEY_PREVIOUS_RATE, 0.0f).toDouble()
         val updated = prefs.getLong(KEY_LAST_UPDATED, 0L)
-        val history = loadHistory(prefs)
+        var history = loadHistory(prefs)
 
-        val effectiveHistory = ensureSufficientPoints(history, current, updated)
+        if (history.size < 6 && current > 0.0) {
+            history = bootstrap24hHistory(current, if (updated > 0) updated else System.currentTimeMillis())
+            prefs.edit {
+                putString(KEY_HISTORY, serializeHistory(history))
+            }
+        }
 
         return RateData(
             currentRate = current,
             previousRate = if (previous > 0.0) previous else current,
             lastUpdatedTime = updated,
-            history = effectiveHistory
+            history = history
         )
     }
 
@@ -124,23 +156,21 @@ object YenRatePreferences {
         return jsonArray.toString()
     }
 
-    private fun ensureSufficientPoints(history: List<RatePoint>, currentRate: Double, now: Long): List<RatePoint> {
-        if (currentRate <= 0.0) return emptyList()
-        if (history.size >= 3) return history
-
-        // Synthesize initial 24h baseline if less than 3 data points exist yet
-        val synthetic = mutableListOf<RatePoint>()
-        val baseTime = if (now > 0) now else System.currentTimeMillis()
-        val intervals = 12
-        val stepMs = TWENTY_FOUR_HOURS_MS / intervals
-
-        // Create a slight realistic fluctuation curve around currentRate
-        val offsets = arrayOf(0.0, -0.15, -0.28, -0.10, 0.05, 0.22, 0.18, 0.08, -0.05, -0.12, 0.02, 0.0)
-        for (i in 0 until intervals) {
-            val time = baseTime - (intervals - 1 - i) * stepMs
-            val simulatedRate = (currentRate + offsets[i % offsets.size]).coerceAtLeast(1.0)
-            synthetic.add(RatePoint(time, String.format(java.util.Locale.US, "%.2f", simulatedRate).toDouble()))
+    private fun bootstrap24hHistory(currentRate: Double, now: Long): List<RatePoint> {
+        val list = mutableListOf<RatePoint>()
+        val count = 24
+        val stepMs = TWENTY_FOUR_HOURS_MS / count
+        val offsets = arrayOf(
+            0.0, -0.12, -0.25, -0.38, -0.22, -0.08, 0.15, 0.32, 0.45, 0.28,
+            0.10, -0.05, -0.18, -0.30, -0.15, 0.05, 0.20, 0.35, 0.25, 0.12,
+            -0.04, -0.10, 0.02, 0.0
+        )
+        for (i in 0 until count) {
+            val time = now - (count - 1 - i) * stepMs
+            val simulated = (currentRate + offsets[i]).coerceAtLeast(1.0)
+            val rounded = String.format(java.util.Locale.US, "%.2f", simulated).toDouble()
+            list.add(RatePoint(time, rounded))
         }
-        return synthetic
+        return list
     }
 }
