@@ -27,7 +27,7 @@
     <string name="refresh_now">Refresh Now</string>
     <string name="refreshing">Refreshing…</string>
     <string name="home_screen_widget">Home Screen Widget</string>
-    <string name="widget_instructions">1. Long press an empty spot on your Home screen.\n2. Tap \'Widgets\'.\n3. Search for \'YenRate\' and select either the Standard or Compact (1x3) Yen Rate Widget.\n4. The widget will update automatically once per hour and display live price change arrows (green ▲ for gain, red ▼ for drop).</string>
+    <string name="widget_instructions">1. Long press an empty spot on your Home screen.\n2. Tap \'Widgets\'.\n3. Search for \'YenRate\' and select either the Standard (3x2) or Compact (1x3) Yen Rate Widget.\n4. The widget will update automatically once per hour. (Tip: Set battery usage to \'Unrestricted\' in app settings for uninterrupted background updates).</string>
     <string name="current_exchange_rate_value">Current Exchange Rate</string>
     <string name="rate_change_status">Rate Change Status</string>
     <string name="last_updated_time">Last Updated Time</string>
